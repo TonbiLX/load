@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
-from PyQt5.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QPushButton, QComboBox, QLabel, QMessageBox, QHBoxLayout, QAbstractItemView, QApplication)
+from PyQt5.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QPushButton, QComboBox, QLabel, QMessageBox, QHBoxLayout, QAbstractItemView, QApplication, QProgressBar)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from visualization import create_canvas
 from utils import paste_data, clear_layout
 import matplotlib.pyplot as plt
@@ -40,7 +40,7 @@ class ContainerLoadingApp(QMainWindow):
         self.remaining_weight_label = QLabel('Kalan Tonaj: 0 kg', self)
 
         self.load_button = QPushButton("Yükle", self)
-        self.load_button.clicked.connect(self.calculate_and_visualize)
+        self.load_button.clicked.connect(self.start_loading)
 
         self.zoom_in_button = QPushButton("", self)
         self.zoom_in_button.setIcon(QIcon('zoom_in.png'))  # Büyüteç simgesi dosyasını kullanın
@@ -52,11 +52,15 @@ class ContainerLoadingApp(QMainWindow):
         self.zoom_out_button.setFixedSize(30, 30)
         self.zoom_out_button.clicked.connect(self.zoom_out)
 
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setValue(0)
+
         self.canvas, self.ax = create_canvas()
 
         control_layout = QVBoxLayout()
         control_layout.addWidget(self.zoom_in_button)
         control_layout.addWidget(self.zoom_out_button)
+        control_layout.addWidget(self.progress_bar)
         control_layout.addStretch()
 
         main_layout = QHBoxLayout()
@@ -92,13 +96,44 @@ class ContainerLoadingApp(QMainWindow):
     def on_vehicle_change(self):
         self.status_label.setText('Durum: Araç Seçildi')
 
-    def calculate_and_visualize(self):
-        row_count = self.table.rowCount()
+    def start_loading(self):
+        self.load_thread = LoadThread(self)
+        self.load_thread.progress.connect(self.update_progress)
+        self.load_thread.finished.connect(self.loading_finished)
+        self.load_thread.start()
+
+    def update_progress(self, value):
+        self.progress_bar.setValue(value)
+
+    def loading_finished(self):
+        self.status_label.setText('Durum: Yükleme Tamamlandı')
+
+    def zoom_in(self):
+        self.ax.set_xlim(self.ax.get_xlim()[0] * 0.9, self.ax.get_xlim()[1] * 0.9)
+        self.ax.set_ylim(self.ax.get_ylim()[0] * 0.9, self.ax.get_ylim()[1] * 0.9)
+        self.ax.set_zlim(self.ax.get_zlim()[0] * 0.9, self.ax.get_zlim()[1] * 0.9)
+        self.canvas.draw()
+
+    def zoom_out(self):
+        self.ax.set_xlim(self.ax.get_xlim()[0] * 1.1, self.ax.get_xlim()[1] * 1.1)
+        self.ax.set_ylim(self.ax.get_ylim()[0] * 1.1, self.ax.get_ylim()[1] * 1.1)
+        self.ax.set_zlim(self.ax.get_zlim()[0] * 1.1, self.ax.get_zlim()[1] * 1.1)
+        self.canvas.draw()
+
+class LoadThread(QThread):
+    progress = pyqtSignal(int)
+
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+
+    def run(self):
+        row_count = self.app.table.rowCount()
         data = []
         for row in range(row_count):
             row_data = []
             for col in range(6):
-                item = self.table.item(row, col)
+                item = self.app.table.item(row, col)
                 if item is not None:
                     row_data.append(item.text())
                 else:
@@ -109,11 +144,11 @@ class ContainerLoadingApp(QMainWindow):
         df = df[df['Uzunluk (cm)'] != '']  # Boş satırları kaldır
         df = df.astype({'Uzunluk (cm)': 'int', 'Genişlik (cm)': 'int', 'Yükseklik (cm)': 'int', 'Ağırlık (kg)': 'int', 'Miktar': 'int'})
 
-        vehicle = self.vehicle_selector.currentText()
-        container_dimensions = self.vehicle_options[vehicle]
+        vehicle = self.app.vehicle_selector.currentText()
+        container_dimensions = self.app.vehicle_options[vehicle]
         container_length, container_width, container_height, max_weight = container_dimensions
 
-        self.ax.clear()
+        self.app.ax.clear()
 
         total_volume = 0
         total_weight = 0
@@ -124,6 +159,9 @@ class ContainerLoadingApp(QMainWindow):
         product_weights = {}
 
         position_map = np.zeros((container_length, container_width, container_height), dtype=bool)
+
+        total_items = len(df) * df['Miktar'].sum()
+        processed_items = 0
 
         for index, row in df.iterrows():
             color = cmap(index % 10)
@@ -145,8 +183,8 @@ class ContainerLoadingApp(QMainWindow):
                                 z + row['Yükseklik (cm)'] <= container_height and
                                 not position_map[x:x+row['Uzunluk (cm)'], y:y+row['Genişlik (cm)'], z:z+row['Yükseklik (cm)']].any()):
                                 
-                                self.ax.bar3d(x, y, z, row['Uzunluk (cm)'], row['Genişlik (cm)'], row['Yükseklik (cm)'], color=color)
-                                self.ax.text(x + row['Uzunluk (cm)'] / 2, y + row['Genişlik (cm)'] / 2, z + row['Yükseklik (cm)'] / 2, row['Ürün Adı'], color='black', ha='center', va='center')
+                                self.app.ax.bar3d(x, y, z, row['Uzunluk (cm)'], row['Genişlik (cm)'], row['Yükseklik (cm)'], color=color)
+                                self.app.ax.text(x + row['Uzunluk (cm)'] / 2, y + row['Genişlik (cm)'] / 2, z + row['Yükseklik (cm)'] / 2, row['Ürün Adı'], color='black', ha='center', va='center')
 
                                 position_map[x:x+row['Uzunluk (cm)'], y:y+row['Genişlik (cm)'], z:z+row['Yükseklik (cm)']] = True
 
@@ -163,53 +201,42 @@ class ContainerLoadingApp(QMainWindow):
                                 break
 
                 if not placed:
-                    QMessageBox.warning(self, "Uyarı", f"{row['Ürün Adı']} ürünü konteynere sığmıyor!")
+                    self.app.status_label.setText(f'Uyarı: {row["Ürün Adı"]} ürünü konteynere sığmıyor!')
                     return
 
-        # Eksen oranlarını düzelt
+                processed_items += 1
+                progress = int((processed_items / total_items) * 100)
+                self.progress.emit(progress)
+                self.app.canvas.draw()
+
         max_dim = max(container_length, container_width, container_height)
-        self.ax.set_box_aspect([container_length/max_dim, container_width/max_dim, container_height/max_dim])
+        self.app.ax.set_box_aspect([container_length/max_dim, container_width/max_dim, container_height/max_dim])
+        self.app.ax.set_xlim(0, container_length)
+        self.app.ax.set_ylim(0, container_width)
+        self.app.ax.set_zlim(0, container_height)
+        self.app.ax.set_xlabel('Uzunluk (cm)')
+        self.app.ax.set_ylabel('Genişlik (cm)')
+        self.app.ax.set_zlabel('Yükseklik (cm)')
+        self.app.ax.set_title(f'{vehicle} Yükleme Durumu')
+        self.app.canvas.draw()
 
-        self.ax.set_xlim(0, container_length)
-        self.ax.set_ylim(0, container_width)
-        self.ax.set_zlim(0, container_height)
-        self.ax.set_xlabel('Uzunluk (cm)')
-        self.ax.set_ylabel('Genişlik (cm)')
-        self.ax.set_zlabel('Yükseklik (cm)')
-        self.ax.set_title(f'{vehicle} Yükleme Durumu')
-        self.canvas.draw()
-
-        self.status_label.setText('Durum: Yükleme Tamamlandı')
-        self.total_weight_label.setText(f'Toplam Ağırlık: {total_weight:.2f} kg')
-        self.total_volume_label.setText(f'Toplam Hacim: {total_volume:.2f} m³')
+        self.app.total_weight_label.setText(f'Toplam Ağırlık: {total_weight:.2f} kg')
+        self.app.total_volume_label.setText(f'Toplam Hacim: {total_volume:.2f} m³')
         remaining_volume = (container_length * container_width * container_height / 1000000) - total_volume
         remaining_weight = max_weight - total_weight
-        self.remaining_volume_label.setText(f'Kalan Hacim: {remaining_volume:.2f} m³')
-        self.remaining_weight_label.setText(f'Kalan Tonaj: {remaining_weight:.2f} kg')
+        self.app.remaining_volume_label.setText(f'Kalan Hacim: {remaining_volume:.2f} m³')
+        self.app.remaining_weight_label.setText(f'Kalan Tonaj: {remaining_weight:.2f} kg')
 
-        # Ürün bilgilerini ekle
-        clear_layout(self.product_info_layout)
+        clear_layout(self.app.product_info_layout)
 
         for product, color in product_colors.items():
             rgba = f"rgba({color[0]*255:.0f}, {color[1]*255:.0f}, {color[2]*255:.0f}, {color[3]:.2f})"
-            color_rect = QLabel(self)
+            color_rect = QLabel(self.app)
             color_rect.setStyleSheet(f"background-color: {rgba}; border: 1px solid black;")
             color_rect.setFixedSize(20, 20)
             product_info = f"Ürün: {product}, Hacim: {product_volumes[product]:.2f} m³, Ağırlık: {product_weights[product]:.2f} kg"
-            product_label = QLabel(product_info, self)
+            product_label = QLabel(product_info, self.app)
             info_layout = QHBoxLayout()
             info_layout.addWidget(color_rect)
             info_layout.addWidget(product_label)
-            self.product_info_layout.addLayout(info_layout)
-
-    def zoom_in(self):
-        self.ax.set_xlim(self.ax.get_xlim()[0] * 0.9, self.ax.get_xlim()[1] * 0.9)
-        self.ax.set_ylim(self.ax.get_ylim()[0] * 0.9, self.ax.get_ylim()[1] * 0.9)
-        self.ax.set_zlim(self.ax.get_zlim()[0] * 0.9, self.ax.get_zlim()[1] * 0.9)
-        self.canvas.draw()
-
-    def zoom_out(self):
-        self.ax.set_xlim(self.ax.get_xlim()[0] * 1.1, self.ax.get_xlim()[1] * 1.1)
-        self.ax.set_ylim(self.ax.get_ylim()[0] * 1.1, self.ax.get_ylim()[1] * 1.1)
-        self.ax.set_zlim(self.ax.get_zlim()[0] * 1.1, self.ax.get_zlim()[1] * 1.1)
-        self.canvas.draw()
+            self.app.product_info_layout.addLayout(info_layout)

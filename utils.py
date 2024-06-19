@@ -10,7 +10,10 @@ def paste_data(table):
             table.setItem(row_index, col_index, QTableWidgetItem(column_data))
 
 def clear_layout(layout):
-    for i in reversed(range(layout.count())):
-        item = layout.itemAt(i)
-        if item.widget():
-            item.widget().deleteLater()
+    if layout is not None:
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget() is not None:
+                child.widget().deleteLater()
+            elif child.layout() is not None:
+                clear_layout(child.layout())
