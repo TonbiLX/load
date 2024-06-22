@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "container_load_visualizer"
+version = "0.1.0"
+description = "\"Container Load Visualizer\" is a software designed to efficiently organize and visualize the contents of loading containers. This tool optimizes container loading using the dimensions and weights of various products and provides both 2D and 3D perspective visualizations of the loading process."
+authors = ["TonbiLX"]
+license = "Free"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^1.26.0"
+pandas = "^2.2.2"
+requests = "^2.25.1"
+
+[tool.poetry.group.dev.dependencies]
+new-lib = "^0.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
