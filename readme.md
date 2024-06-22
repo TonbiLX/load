@@ -55,7 +55,7 @@ The project uses Poetry for dependency management. Ensure Poetry is installed on
 2. **Run the Script:**
    - After preparing your data, run the script using the following command:
      ```sh
-     poetry run python load_2D/main.py
+     poetry run python Load_2D/main.py
      ```
 
 3. **View the Output:**
