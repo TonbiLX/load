@@ -22,6 +22,7 @@ This project aims to provide a visualization tool for loading containers with di
 
 - **pandas:** For data manipulation and calculation.
 - **matplotlib:** For 3D visualization of the container and products.
+- **pyqt5:** For graphical user interface.
 
 ## Installation
 
@@ -31,13 +32,36 @@ The project uses Poetry for dependency management. Ensure Poetry is installed on
 
     ```sh
     poetry install
+    poetry add pyqt5
     ```
 
 2. **Run the Program:**
 
     ```sh
-    poetry run python your_script.py
+    poetry run python load_2D/main.py
     ```
+
+## Usage
+
+1. **Prepare Your Data:**
+   - Create a CSV file or directly edit the script to input your product data. The data should include columns for product name, dimensions (length, width, height), weight, and quantity.
+   - Example data format:
+     | Ürün Adı | Uzunluk (cm) | Genişlik (cm) | Yükseklik (cm) | Ağırlık (kg) | Miktar |
+     |----------|---------------|---------------|----------------|--------------|--------|
+     | Ürün 1   | 100           | 50            | 50             | 20           | 10     |
+     | Ürün 2   | 19            | 39            | 15             | 15           | 100    |
+     | Ürün 3   | 120           | 80            | 190            | 700          | 10     |
+
+2. **Run the Script:**
+   - After preparing your data, run the script using the following command:
+     ```sh
+     poetry run python load_2D/main.py
+     ```
+
+3. **View the Output:**
+   - The program will calculate the total weight, volume, and remaining capacity of the container.
+   - A 3D visualization will be generated, showing the arrangement of products inside the container.
+   - The summary of total weight, volume, and remaining capacity will be printed in the console.
 
 ## Example Output
 
