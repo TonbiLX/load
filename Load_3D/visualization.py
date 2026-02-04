@@ -1,6 +1,6 @@
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.pyplot as plt
+
 
 def create_canvas():
     canvas = FigureCanvas(Figure())
