@@ -3,6 +3,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 import numpy as np
 
+
 def create_canvas():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -10,11 +11,12 @@ def create_canvas():
     canvas = FigureCanvasQTAgg(fig)
     return canvas, ax
 
-def draw_prism(ax, x, y, dx, dy, dz, color, label=None):
-    """Draw a rectangular prism with given dimensions."""
+
+def draw_prism(ax, x, y, dx, dy, dz, color, label=None, z=0):
+    """Draw a rectangular prism with given dimensions at position (x, y, z)."""
     vertices = [
-        [x, y, 0], [x + dx, y, 0], [x + dx, y + dy, 0], [x, y + dy, 0],
-        [x, y, dz], [x + dx, y, dz], [x + dx, y + dy, dz], [x, y + dy, dz]
+        [x, y, z], [x + dx, y, z], [x + dx, y + dy, z], [x, y + dy, z],
+        [x, y, z + dz], [x + dx, y, z + dz], [x + dx, y + dy, z + dz], [x, y + dy, z + dz]
     ]
     vertices = np.array(vertices)
 

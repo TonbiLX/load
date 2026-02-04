@@ -38,7 +38,7 @@ The project uses Poetry for dependency management. Ensure Poetry is installed on
 2. **Run the Program:**
 
     ```sh
-    poetry run python load_2D/main.py
+    poetry run python Load_2D/main.py
     ```
 
 ## Usage
